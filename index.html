@@ -267,14 +267,25 @@ function scaleFilter(){
 }
 async function run(){
   if(!chosenFile){showErr('請先選擇一段影片。');return;}
+
   clearErr();
-  goBtn.disabled=true;progWrap.style.display='block';result.classList.add('hidden');logEl.textContent='';
+  goBtn.disabled = true;
+  progWrap.style.display = 'block';
+  result.classList.add('hidden');
+  result.style.display = 'none';
+  outVid.removeAttribute('src');
+  dlBtn.removeAttribute('href');
+  logEl.textContent = '';
   setBar(null,'準備中…');
-  const outName='output.mp4';
+
+  const outName = 'output.mp4';
+
   try{
     await ensureEngine();
+
     const ext=(chosenFile.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
     const inName='input.'+ext;
+
     try{await ffmpeg.deleteFile(inName);}catch(_){}
     try{await ffmpeg.deleteFile(outName);}catch(_){}
 
@@ -282,46 +293,84 @@ async function run(){
     await ffmpeg.writeFile(inName,new Uint8Array(await chosenFile.arrayBuffer()));
 
     const sf=scaleFilter();
-    const vf=[sf,'reverse'].filter(Boolean).join(',');   // 先縮放再倒轉
+    const vf=[sf,'reverse'].filter(Boolean).join(',');
     const args=['-i',inName,'-vf',vf];
-    if(opt.audio==='rev')args.push('-af','areverse');else args.push('-an');
+
+    if(opt.audio==='rev') args.push('-af','areverse');
+    else args.push('-an');
+
     args.push('-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p');
-    if(opt.audio==='rev')args.push('-c:a','aac','-b:a','192k');
+
+    if(opt.audio==='rev') args.push('-c:a','aac','-b:a','192k');
+
     args.push(outName);
 
-    setPhase('倒轉處理中…');setBar(0,'倒轉處理中…');
+    setPhase('倒轉處理中…');
+    setBar(0,'倒轉處理中…');
     logLine('$ ffmpeg '+args.join(' '));
-    const code=await ffmpeg.exec(args);
-    if(code!==0)throw new Error('ffmpeg exit '+code);
 
-    setPhase('產生檔案…');setBar(1,'產生檔案…');
-    const data=await ffmpeg.readFile(outName);
-    const blob = new Blob([data], { type: 'video/mp4' });
-    if(lastURL)URL.revokeObjectURL(lastURL);
-    lastURL=URL.createObjectURL(blob);
-    try{await ffmpeg.deleteFile(inName);await ffmpeg.deleteFile(outName);}catch(_){}
+    // ffmpeg.wasm 不同版本回傳值可能是 0、undefined，這裡不要用 code 判斷失敗。
+    await ffmpeg.exec(args);
 
-    outVid.src=lastURL;
-    const base=chosenFile.name.replace(/\.[^.]+$/,'')||'video';
-    dlBtn.href=lastURL;dlBtn.download=base+'_reversed.mp4';
-    progWrap.style.display='none';
+    setPhase('產生檔案…');
+    setBar(1,'產生檔案…');
+
+    const data = await ffmpeg.readFile(outName);
+    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+
+    if(!bytes || bytes.length === 0){
+      throw new Error('output.mp4 是空的，沒有成功產生影片');
+    }
+
+    const blob = new Blob([bytes], { type: 'video/mp4' });
+
+    if(lastURL) URL.revokeObjectURL(lastURL);
+    lastURL = URL.createObjectURL(blob);
+
+    try{await ffmpeg.deleteFile(inName);}catch(_){}
+    try{await ffmpeg.deleteFile(outName);}catch(_){}
+
+    outVid.src = lastURL;
+    outVid.load();
+
+    const base = chosenFile.name.replace(/\.[^.]+$/,'') || 'video';
+    dlBtn.href = lastURL;
+    dlBtn.download = base + '_reversed.mp4';
+
+    progWrap.style.display = 'none';
+    clearErr();
+
+    // 同時移除 hidden class 與 display:none，避免結果區塊被 CSS 擋住。
     result.classList.remove('hidden');
-	result.style.display = 'block';
-    result.scrollIntoView({behavior:'smooth',block:'start'});
+    result.style.display = 'block';
+
+    stLabel.textContent = '倒轉完成';
+    stPct.textContent = '100%';
+
+    setTimeout(()=>{
+      result.scrollIntoView({behavior:'smooth',block:'start'});
+    }, 150);
+
   }catch(e){
     console.error(e);
     const msg=(e&&e.message?e.message:String(e)).toLowerCase();
+
     if(msg.includes('memory')||msg.includes('abort')||msg.includes('oom')||msg.includes('bounds')){
       resetEngine();
       showErr('<b>記憶體不足，處理中止。</b><br>素材可能太大，請把「輸出畫質」調成 <b>720p</b> 或 <b>480p</b> 後再試一次。');
-    }else if(msg.includes('腳本載入')||msg.includes('下載失敗')||msg.includes('fetch')){
-      showErr('<b>運算核心載入失敗。</b><br>請確認網路連線正常後重試。若在公司／校園網路，可能擋住了 unpkg.com。');
+    }else if(msg.includes('腳本載入')||msg.includes('下載失敗')||msg.includes('fetch')||msg.includes('import')){
+      showErr('<b>運算核心載入失敗。</b><br>請確認 <b>ffmpeg/</b> 資料夾內的核心檔案都有上傳，並按 <b>Ctrl+Shift+R</b> 強制重新整理。');
     }else{
-      showErr('<b>處理失敗。</b><br>可展開下方「處理紀錄」查看細節，或換一段影片重試。');
+      showErr('<b>處理失敗。</b><br>'+String(e.message||e)+'<br>可展開下方「處理紀錄」查看細節，或換一段影片重試。');
     }
-    logEl.style.display='block';logToggle.textContent='隱藏處理紀錄 ▴';
-    progWrap.style.display='block';setBar(0,'已停止');
-  }finally{goBtn.disabled=false;}
+
+    logEl.style.display='block';
+    logToggle.textContent='隱藏處理紀錄 ▴';
+    progWrap.style.display='block';
+    setBar(0,'已停止');
+  }finally{
+    goBtn.disabled=false;
+  }
 }
 
 /* ---------- 事件 ---------- */
@@ -335,7 +384,7 @@ function wireSeg(group,key){$(group).addEventListener('click',e=>{const b=e.targ
 wireSeg('segAudio','audio');wireSeg('segScale','scale');
 logToggle.addEventListener('click',()=>{const show=logEl.style.display!=='block';logEl.style.display=show?'block':'none';logToggle.textContent=show?'隱藏處理紀錄 ▴':'顯示處理紀錄 ▾';});
 goBtn.addEventListener('click',run);
-againBtn.addEventListener('click',()=>{chosenFile=null;fileInput.value='';fileBox.classList.add('hidden');panelOpts.classList.add('hidden');result.classList.add('hidden');progWrap.style.display='none';clearErr();$('durWarn').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'});});
+againBtn.addEventListener('click',()=>{chosenFile=null;fileInput.value='';fileBox.classList.add('hidden');panelOpts.classList.add('hidden');result.classList.add('hidden');result.style.display='none';progWrap.style.display='none';clearErr();$('durWarn').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'});});
 </script>
 </body>
 </html>
