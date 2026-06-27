@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>影片倒轉所 · Reverse Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#060a18; --bg-2:#0a1130; --panel:#0d1638; --panel-2:#101c46;
+    --line:rgba(94,140,220,.18); --line-bright:rgba(60,220,255,.35);
+    --cyan:#39e0ff; --cyan-dim:#1aa6c4; --violet:#7c83ff;
+    --text:#e7f0ff; --muted:#8aa0c8; --danger:#ff5b7a; --ok:#46e6a0;
+    --glow:0 0 24px rgba(57,224,255,.28);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1100px 600px at 80% -10%, rgba(124,131,255,.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(57,224,255,.08), transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:"Noto Sans TC",system-ui,sans-serif;
+    min-height:100vh; line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background-image:linear-gradient(rgba(94,140,220,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(94,140,220,.05) 1px,transparent 1px);
+    background-size:44px 44px;
+    -webkit-mask-image:radial-gradient(circle at 50% 30%,#000 30%,transparent 85%);mask-image:radial-gradient(circle at 50% 30%,#000 30%,transparent 85%);
+  }
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:28px 18px 64px}
+  header{text-align:center;margin:14px 0 26px}
+  .rewind{display:inline-flex;gap:6px;align-items:center;justify-content:center;margin-bottom:10px}
+  .rewind span{display:block;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-right:11px solid var(--cyan);filter:drop-shadow(0 0 6px rgba(57,224,255,.6));animation:slide 1.4s linear infinite}
+  .rewind span:nth-child(2){animation-delay:.18s;opacity:.7}
+  .rewind span:nth-child(3){animation-delay:.36s;opacity:.45}
+  @keyframes slide{0%{transform:translateX(4px)}50%{transform:translateX(-3px)}100%{transform:translateX(4px)}}
+  h1{font-family:"Orbitron",sans-serif;font-weight:900;letter-spacing:.06em;font-size:clamp(26px,7vw,42px);margin:0;line-height:1.1;background:linear-gradient(180deg,#eafaff,var(--cyan) 70%,var(--cyan-dim));-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:var(--glow)}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:8px;letter-spacing:.02em}
+  .badge{display:inline-flex;align-items:center;gap:7px;margin-top:14px;padding:5px 13px;border:1px solid var(--line-bright);border-radius:999px;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--cyan);background:rgba(57,224,255,.06)}
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--bg-2));border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:16px;box-shadow:0 18px 50px -28px rgba(0,0,0,.9)}
+  .panel-title{font-family:"Orbitron",sans-serif;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 14px;display:flex;align-items:center;gap:9px}
+  .panel-title::before{content:"";width:14px;height:2px;background:var(--cyan);box-shadow:var(--glow)}
+  #drop{border:1.5px dashed var(--line-bright);border-radius:14px;padding:34px 18px;text-align:center;cursor:pointer;transition:.18s;background:rgba(57,224,255,.025)}
+  #drop:hover,#drop:focus-visible{border-color:var(--cyan);background:rgba(57,224,255,.07);outline:none}
+  #drop.drag{border-color:var(--violet);background:rgba(124,131,255,.10)}
+  #drop .ic{font-size:34px;line-height:1;margin-bottom:8px}
+  #drop .big{font-weight:700;font-size:16px}
+  #drop .small{color:var(--muted);font-size:12.5px;margin-top:5px}
+  .filecard{display:flex;gap:14px;align-items:center;margin-top:4px}
+  .filecard video{width:128px;height:78px;border-radius:9px;background:#000;border:1px solid var(--line);object-fit:cover;flex:0 0 auto}
+  .filemeta{min-width:0;flex:1}
+  .filemeta .name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .filemeta .stat{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);margin-top:3px}
+  .warnline{color:#ffd27a;font-size:12px;margin-top:7px;display:none}
+  .warnline.show{display:block}
+  .opt-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.opt-grid{grid-template-columns:1fr}}
+  .opt{background:var(--panel-2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+  .opt label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-family:"Orbitron",sans-serif}
+  .seg{display:flex;margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:8px 4px;cursor:pointer;font-family:"Noto Sans TC",sans-serif;font-size:13px;font-weight:500;transition:.15s;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:rgba(57,224,255,.16);color:var(--cyan);text-shadow:0 0 10px rgba(57,224,255,.5)}
+  .seg button:focus-visible{outline:2px solid var(--cyan);outline-offset:-2px}
+  .go{width:100%;margin-top:16px;border:0;border-radius:12px;cursor:pointer;font-family:"Orbitron",sans-serif;font-weight:700;letter-spacing:.08em;font-size:16px;padding:15px;color:#03121a;background:linear-gradient(180deg,#76efff,var(--cyan));box-shadow:0 10px 30px -8px rgba(57,224,255,.55), inset 0 1px 0 rgba(255,255,255,.5);transition:.18s}
+  .go:hover{filter:brightness(1.08);transform:translateY(-1px)}
+  .go:active{transform:translateY(0)}
+  .go:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3);transform:none}
+  .go .gi{margin-right:8px;display:inline-block}
+  #progWrap{display:none}
+  .status{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:9px;gap:10px}
+  .status .label{color:var(--text);font-weight:500}
+  .status .pct{font-family:"JetBrains Mono",monospace;color:var(--cyan);font-size:13px;flex:0 0 auto}
+  .bar{height:9px;border-radius:99px;background:rgba(10,18,46,.9);border:1px solid var(--line);overflow:hidden}
+  .bar i{display:block;height:100%;width:0%;border-radius:99px;background:linear-gradient(90deg,var(--cyan-dim),var(--cyan),var(--violet));box-shadow:0 0 14px rgba(57,224,255,.55);transition:width .25s ease}
+  .bar.indet i{width:35% !important;animation:indet 1.1s ease-in-out infinite}
+  @keyframes indet{0%{margin-left:-35%}100%{margin-left:100%}}
+  .logtoggle{margin-top:12px;background:none;border:0;color:var(--muted);font-size:12px;cursor:pointer;font-family:"JetBrains Mono",monospace;text-decoration:underline dotted;padding:0}
+  #log{display:none;margin-top:8px;max-height:120px;overflow:auto;background:#05091a;border:1px solid var(--line);border-radius:9px;padding:10px;font-family:"JetBrains Mono",monospace;font-size:11px;color:#7fa6c8;white-space:pre-wrap;word-break:break-all}
+  #result{display:none}
+  #outVid{width:100%;border-radius:12px;background:#000;border:1px solid var(--line-bright);box-shadow:var(--glow)}
+  .row{display:flex;gap:12px;margin-top:14px}
+  @media(max-width:520px){.row{flex-direction:column}}
+  .btn{flex:1;text-align:center;text-decoration:none;border-radius:11px;padding:13px;cursor:pointer;font-family:"Orbitron",sans-serif;font-weight:700;font-size:14px;letter-spacing:.05em;transition:.15s;border:1px solid transparent}
+  .btn-dl{color:#03121a;background:linear-gradient(180deg,#76efff,var(--cyan));box-shadow:0 8px 24px -10px rgba(57,224,255,.6)}
+  .btn-dl:hover{filter:brightness(1.08)}
+  .btn-again{color:var(--cyan);background:rgba(57,224,255,.06);border-color:var(--line-bright)}
+  .btn-again:hover{background:rgba(57,224,255,.13)}
+  .err{display:none;margin-top:14px;border:1px solid rgba(255,91,122,.45);background:rgba(255,91,122,.08);border-radius:11px;padding:13px 15px;color:#ffc3cf;font-size:13.5px}
+  .err.show{display:block}
+  .err b{color:var(--danger)}
+  footer{margin-top:26px;color:var(--muted);font-size:12px;line-height:1.8}
+  footer .k{color:var(--cyan);font-family:"JetBrains Mono",monospace}
+  .hidden{display:none !important}
+  @media (prefers-reduced-motion: reduce){.rewind span,.bar.indet i{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="rewind" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h1>影片倒轉所</h1>
+    <div class="sub">上傳影片 → 時間軸倒轉 → 下載成品</div>
+    <div class="badge"><span class="dot"></span>100% 本地運算 · 影片不會上傳到任何伺服器</div>
+  </header>
+
+  <section class="panel" id="panelUpload">
+    <h2 class="panel-title">載入素材</h2>
+    <div id="drop" tabindex="0" role="button" aria-label="點擊或拖曳上傳影片">
+      <div class="ic">⤓</div>
+      <div class="big">點擊選擇影片，或拖曳到此處</div>
+      <div class="small">支援 MP4 / MOV / WebM / MKV 等 · 為短片素材打造</div>
+    </div>
+    <input id="file" type="file" accept="video/*" class="hidden" />
+    <div id="fileBox" class="hidden" style="margin-top:16px">
+      <div class="filecard">
+        <video id="srcPreview" muted playsinline></video>
+        <div class="filemeta"><div class="name" id="fName">—</div><div class="stat" id="fStat">—</div></div>
+      </div>
+      <div class="warnline" id="durWarn"></div>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="panelOpts">
+    <h2 class="panel-title">倒轉設定</h2>
+    <div class="opt-grid">
+      <div class="opt">
+        <label>聲音</label>
+        <div class="seg" id="segAudio" role="group" aria-label="聲音處理方式">
+          <button data-v="rev" class="on">倒轉聲音</button>
+          <button data-v="mute">移除聲音</button>
+        </div>
+      </div>
+      <div class="opt">
+        <label>輸出畫質（上限）</label>
+        <div class="seg" id="segScale" role="group" aria-label="輸出解析度上限">
+          <button data-v="src" class="on">原始</button>
+          <button data-v="1080">1080p</button>
+          <button data-v="720">720p</button>
+          <button data-v="480">480p</button>
+        </div>
+      </div>
+    </div>
+    <button class="go" id="goBtn"><span class="gi">⟲</span>開始倒轉</button>
+    <div id="progWrap">
+      <div class="status"><span class="label" id="stLabel">準備中…</span><span class="pct" id="stPct"></span></div>
+      <div class="bar" id="bar"><i id="barFill"></i></div>
+      <button class="logtoggle" id="logToggle" type="button">顯示處理紀錄 ▾</button>
+      <pre id="log"></pre>
+    </div>
+    <div class="err" id="errBox"></div>
+  </section>
+
+  <section class="panel hidden" id="result">
+    <h2 class="panel-title">倒轉完成</h2>
+    <video id="outVid" controls playsinline></video>
+    <div class="row">
+      <a class="btn btn-dl" id="dlBtn" download>↓ 下載影片</a>
+      <button class="btn btn-again" id="againBtn">＋ 再做一個</button>
+    </div>
+  </section>
+
+  <footer>
+    <div>· 第一次使用會下載運算核心 <span class="k">ffmpeg.wasm（約 31 MB）</span>，之後由瀏覽器快取。</div>
+    <div>· 為短片（約數秒）打造，1080p 也沒問題。素材太長時可改用較低畫質。</div>
+    <div>· 純瀏覽器本地運算，影片不會上傳。</div>
+  </footer>
+</div>
+
+<script>
+/* ===================================================================
+   影片倒轉工具 — ffmpeg.wasm 單執行緒核心（免特殊伺服器標頭）
+   單純直接倒轉，適合數秒短片。可直接放到 GitHub Pages 等靜態主機。
+=================================================================== */
+const FF_BASE   = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
+const CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
+
+let ffmpeg=null, engineReady=false, chosenFile=null, lastURL=null;
+let srcW=0, srcH=0, srcDur=0;
+let opt={ audio:'rev', scale:'src' };
+let gPhase='處理中…';
+
+const $=id=>document.getElementById(id);
+const drop=$('drop'),fileInput=$('file'),fileBox=$('fileBox'),srcPreview=$('srcPreview');
+const panelOpts=$('panelOpts'),goBtn=$('goBtn'),progWrap=$('progWrap');
+const stLabel=$('stLabel'),stPct=$('stPct'),bar=$('bar'),barFill=$('barFill');
+const logEl=$('log'),logToggle=$('logToggle'),errBox=$('errBox');
+const result=$('result'),outVid=$('outVid'),dlBtn=$('dlBtn'),againBtn=$('againBtn');
+
+/* ---------- 工具 ---------- */
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=()=>res();s.onerror=()=>rej(new Error('腳本載入失敗：'+src));document.head.appendChild(s);});}
+async function toBlobURL(url,mime,onProg){
+  const resp=await fetch(url);
+  if(!resp.ok) throw new Error('下載失敗 '+resp.status+'：'+url);
+  if(onProg&&resp.body){
+    const total=+resp.headers.get('Content-Length')||0;
+    const reader=resp.body.getReader();let got=0;const chunks=[];
+    for(;;){const {done,value}=await reader.read();if(done)break;chunks.push(value);got+=value.length;if(total)onProg(got/total);}
+    return URL.createObjectURL(new Blob(chunks,{type:mime}));
+  }
+  const blob=await resp.blob();
+  return URL.createObjectURL(new Blob([blob],{type:mime}));
+}
+const fmtBytes=b=>{if(!b)return '—';const u=['B','KB','MB','GB'];let i=0;while(b>=1024&&i<3){b/=1024;i++;}return b.toFixed(b<10&&i>0?1:0)+' '+u[i];};
+const fmtTime=s=>{if(!isFinite(s))return '—';const m=Math.floor(s/60),x=Math.floor(s%60);return m+':'+String(x).padStart(2,'0');};
+function setBar(p,label){
+  if(p===null){bar.classList.add('indet');stPct.textContent='';}
+  else{bar.classList.remove('indet');barFill.style.width=Math.max(0,Math.min(100,p*100)).toFixed(0)+'%';stPct.textContent=Math.round(p*100)+'%';}
+  if(label)stLabel.textContent=label;
+}
+function setPhase(label){gPhase=label;setBar(null,label);}
+function showErr(html){errBox.innerHTML=html;errBox.classList.add('show');}
+function clearErr(){errBox.classList.remove('show');errBox.innerHTML='';}
+function logLine(t){logEl.textContent+=t+'\n';logEl.scrollTop=logEl.scrollHeight;}
+
+/* ---------- 載入核心 ---------- */
+async function ensureEngine(){
+  if(engineReady)return;
+  if(!window.FFmpegWASM){setPhase('載入程式庫…');await loadScript(FF_BASE+'/ffmpeg.js');}
+  const { FFmpeg }=window.FFmpegWASM;
+  ffmpeg=new FFmpeg();
+  ffmpeg.on('log',({message})=>logLine(message));
+  ffmpeg.on('progress',({progress})=>{if(progress>=0&&progress<=1)setBar(progress,gPhase);});
+  setPhase('下載運算核心（約 31 MB，首次較久）…');
+  const [coreURL,wasmURL,workerURL]=await Promise.all([
+    toBlobURL(CORE_BASE+'/ffmpeg-core.js','text/javascript'),
+    toBlobURL(CORE_BASE+'/ffmpeg-core.wasm','application/wasm',p=>setBar(p,'下載運算核心（約 31 MB）…')),
+    toBlobURL(FF_BASE+'/814.ffmpeg.js','text/javascript'),
+  ]);
+  setPhase('初始化核心…');
+  await ffmpeg.load({coreURL,wasmURL,classWorkerURL:workerURL});
+  engineReady=true;
+}
+function resetEngine(){try{if(ffmpeg)ffmpeg.terminate();}catch(_){}ffmpeg=null;engineReady=false;}
+
+/* ---------- 選檔 ---------- */
+function pickFile(f){
+  if(!f||!f.type.startsWith('video/')){showErr('請選擇<b>影片</b>檔案。');return;}
+  clearErr();chosenFile=f;
+  $('fName').textContent=f.name;$('fStat').textContent=fmtBytes(f.size);
+  const url=URL.createObjectURL(f);
+  srcPreview.src=url;fileBox.classList.remove('hidden');panelOpts.classList.remove('hidden');
+  const probe=document.createElement('video');probe.preload='metadata';probe.src=url;
+  probe.onloadedmetadata=()=>{
+    srcDur=probe.duration;srcW=probe.videoWidth;srcH=probe.videoHeight;
+    $('fStat').textContent=`${fmtBytes(f.size)} · ${srcW}×${srcH} · ${fmtTime(srcDur)}`;
+    const warn=$('durWarn');
+    if(srcDur>15){warn.textContent='ⓘ 這支工具適合短片；素材較長時建議把畫質調為 720p 或 480p，以免記憶體不足。';warn.classList.add('show');}
+    else warn.classList.remove('show');
+  };
+  panelOpts.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ---------- 倒轉 ---------- */
+function scaleFilter(){
+  if(opt.scale==='src')return null;
+  return "scale=-2:'min("+parseInt(opt.scale,10)+",ih)'";
+}
+async function run(){
+  if(!chosenFile){showErr('請先選擇一段影片。');return;}
+  clearErr();
+  goBtn.disabled=true;progWrap.style.display='block';result.classList.add('hidden');logEl.textContent='';
+  setBar(null,'準備中…');
+  const outName='output.mp4';
+  try{
+    await ensureEngine();
+    const ext=(chosenFile.name.split('.').pop()||'mp4').toLowerCase().replace(/[^a-z0-9]/g,'')||'mp4';
+    const inName='input.'+ext;
+    try{await ffmpeg.deleteFile(inName);}catch(_){}
+    try{await ffmpeg.deleteFile(outName);}catch(_){}
+
+    setPhase('讀取影片…');
+    await ffmpeg.writeFile(inName,new Uint8Array(await chosenFile.arrayBuffer()));
+
+    const sf=scaleFilter();
+    const vf=[sf,'reverse'].filter(Boolean).join(',');   // 先縮放再倒轉
+    const args=['-i',inName,'-vf',vf];
+    if(opt.audio==='rev')args.push('-af','areverse');else args.push('-an');
+    args.push('-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p');
+    if(opt.audio==='rev')args.push('-c:a','aac','-b:a','192k');
+    args.push(outName);
+
+    setPhase('倒轉處理中…');setBar(0,'倒轉處理中…');
+    logLine('$ ffmpeg '+args.join(' '));
+    const code=await ffmpeg.exec(args);
+    if(code!==0)throw new Error('ffmpeg exit '+code);
+
+    setPhase('產生檔案…');setBar(1,'產生檔案…');
+    const data=await ffmpeg.readFile(outName);
+    const blob=new Blob([data.buffer],{type:'video/mp4'});
+    if(lastURL)URL.revokeObjectURL(lastURL);
+    lastURL=URL.createObjectURL(blob);
+    try{await ffmpeg.deleteFile(inName);await ffmpeg.deleteFile(outName);}catch(_){}
+
+    outVid.src=lastURL;
+    const base=chosenFile.name.replace(/\.[^.]+$/,'')||'video';
+    dlBtn.href=lastURL;dlBtn.download=base+'_reversed.mp4';
+    progWrap.style.display='none';
+    result.classList.remove('hidden');
+    result.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){
+    console.error(e);
+    const msg=(e&&e.message?e.message:String(e)).toLowerCase();
+    if(msg.includes('memory')||msg.includes('abort')||msg.includes('oom')||msg.includes('bounds')){
+      resetEngine();
+      showErr('<b>記憶體不足，處理中止。</b><br>素材可能太大，請把「輸出畫質」調成 <b>720p</b> 或 <b>480p</b> 後再試一次。');
+    }else if(msg.includes('腳本載入')||msg.includes('下載失敗')||msg.includes('fetch')){
+      showErr('<b>運算核心載入失敗。</b><br>請確認網路連線正常後重試。若在公司／校園網路，可能擋住了 unpkg.com。');
+    }else{
+      showErr('<b>處理失敗。</b><br>可展開下方「處理紀錄」查看細節，或換一段影片重試。');
+    }
+    logEl.style.display='block';logToggle.textContent='隱藏處理紀錄 ▴';
+    progWrap.style.display='block';setBar(0,'已停止');
+  }finally{goBtn.disabled=false;}
+}
+
+/* ---------- 事件 ---------- */
+drop.addEventListener('click',()=>fileInput.click());
+drop.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();fileInput.click();}});
+fileInput.addEventListener('change',e=>{if(e.target.files[0])pickFile(e.target.files[0]);});
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)pickFile(f);});
+function wireSeg(group,key){$(group).addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;[...$(group).children].forEach(x=>x.classList.remove('on'));b.classList.add('on');opt[key]=b.dataset.v;});}
+wireSeg('segAudio','audio');wireSeg('segScale','scale');
+logToggle.addEventListener('click',()=>{const show=logEl.style.display!=='block';logEl.style.display=show?'block':'none';logToggle.textContent=show?'隱藏處理紀錄 ▴':'顯示處理紀錄 ▾';});
+goBtn.addEventListener('click',run);
+againBtn.addEventListener('click',()=>{chosenFile=null;fileInput.value='';fileBox.classList.add('hidden');panelOpts.classList.add('hidden');result.classList.add('hidden');progWrap.style.display='none';clearErr();$('durWarn').classList.remove('show');window.scrollTo({top:0,behavior:'smooth'});});
+</script>
+</body>
+</html>
