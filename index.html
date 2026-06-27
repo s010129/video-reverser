@@ -233,7 +233,11 @@ async function ensureEngine(){
     toBlobURL(FF_BASE+'/814.ffmpeg.js','text/javascript'),
   ]);
   setPhase('初始化核心…');
-  await ffmpeg.load({coreURL,wasmURL,classWorkerURL:workerURL});
+ await ffmpeg.load({
+  coreURL,
+  wasmURL,
+  workerURL
+});
   engineReady=true;
 }
 function resetEngine(){try{if(ffmpeg)ffmpeg.terminate();}catch(_){}ffmpeg=null;engineReady=false;}
