@@ -296,7 +296,7 @@ async function run(){
 
     setPhase('產生檔案…');setBar(1,'產生檔案…');
     const data=await ffmpeg.readFile(outName);
-    const blob=new Blob([data.buffer],{type:'video/mp4'});
+    const blob = new Blob([data], { type: 'video/mp4' });
     if(lastURL)URL.revokeObjectURL(lastURL);
     lastURL=URL.createObjectURL(blob);
     try{await ffmpeg.deleteFile(inName);await ffmpeg.deleteFile(outName);}catch(_){}
@@ -306,6 +306,7 @@ async function run(){
     dlBtn.href=lastURL;dlBtn.download=base+'_reversed.mp4';
     progWrap.style.display='none';
     result.classList.remove('hidden');
+	result.style.display = 'block';
     result.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){
     console.error(e);
