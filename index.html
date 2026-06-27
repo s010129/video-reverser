@@ -166,7 +166,7 @@
   </section>
 
   <footer>
-    <div>· 第一次使用會下載運算核心 <span class="k">ffmpeg.wasm（約 31 MB）</span>，之後由瀏覽器快取。</div>
+    <div>· 運算核心 <span class="k">ffmpeg.wasm</span> 已隨網站一起放在 <span class="k">ffmpeg/</span> 資料夾，無需外部 CDN，可離線使用。</div>
     <div>· 為短片（約數秒）打造，1080p 也沒問題。素材太長時可改用較低畫質。</div>
     <div>· 純瀏覽器本地運算，影片不會上傳。</div>
   </footer>
@@ -177,8 +177,8 @@
    影片倒轉工具 — ffmpeg.wasm 單執行緒核心（免特殊伺服器標頭）
    單純直接倒轉，適合數秒短片。可直接放到 GitHub Pages 等靜態主機。
 =================================================================== */
-const FF_BASE   = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.10/dist/umd';
-const CORE_BASE = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd';
+const FF_BASE   = './ffmpeg';
+const CORE_BASE = './ffmpeg';
 
 let ffmpeg=null, engineReady=false, chosenFile=null, lastURL=null;
 let srcW=0, srcH=0, srcDur=0;
